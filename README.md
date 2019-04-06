@@ -5,6 +5,8 @@
 
 wsconn is a websocket client based on [gorilla/websocket](https://github.com/gorilla/websocket) that automatically reconnects if the connection is dropped. It is thread safe, all write opperations are sent through a chanel, so you can have multiple goroutines that write to socket in the same time. If an error occured, you can wait until you receive a successful reconnect message (see the example)
 
+If you have a list of write messages that you need to be executed right after a reconnect event, you can store them with AddToRecoverCommands. 
+
 ## Installation
 
     go get "github.com/radugheorghies/wsconn"
