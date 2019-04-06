@@ -116,7 +116,7 @@ func (wsc *WsConn) Run() {
 	wsc.Connect()
 }
 
-// WriteMessage will write message in channel in order to be writen on socket
+// WriteMessage will write message in channel in order to be written on socket
 func (wsc *WsConn) WriteMessage(messageType int, data []byte) error {
 	if wsc.status.isConnected() {
 		responseChan := make(chan error)
@@ -177,7 +177,7 @@ func (wsc *WsConn) dropConnection() {
 
 func (wsc *WsConn) reconnect() {
 	// listen for reconect message
-	// if other reconnect message is comming and the
+	// if other reconnect message is coming and the
 	// reconnect faze is not finished, we will apply the drop pattern
 	for range wsc.reconnectChan {
 		finishReconnect := make(chan struct{})
