@@ -3,7 +3,7 @@ package wsconn_test
 import (
 	"testing"
 
-	"bitbucket.org/ircrypto/tradepipe/pkg/core/wsconn"
+	"github.com/radugheorghies/wsconn"
 )
 
 func TestNew(t *testing.T) {

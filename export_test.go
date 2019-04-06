@@ -1,4 +1,4 @@
-package wsconn
+package wsconn_test
 
 const (
 	// DefaultMaxReconnectionAtempts exports defaultMaxReconnectionAtempts for testing

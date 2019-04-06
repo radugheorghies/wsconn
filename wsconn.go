@@ -51,14 +51,13 @@ type WsConn struct {
 	ws     *websocket.Conn   // websocket connection
 	dialer *websocket.Dialer // websocket dialer
 
-	writeChan           chan message     // the chan for writing to socket
-	reconnectChan       chan struct{}    // the chan where we send recconect signals
-	reqHeader           http.Header      // request header
-	httpResp            *http.Response   // httpResponse used only for debuging
-	recoverCommands     []string         // if a reconnection ocured, we will write to socket all comands, right after reconnect
-	isSendingFatalError bool             // if is set to true, will not panic, will send fatal error message trough a channel
-	reconnectAtempts    int              // current number of reconnect tryes
-	status              connectionStatus // the connection status: true = connected
+	writeChan        chan message     // the chan for writing to socket
+	reconnectChan    chan struct{}    // the chan where we send recconect signals
+	reqHeader        http.Header      // request header
+	httpResp         *http.Response   // httpResponse used only for debuging
+	recoverCommands  []string         // if a reconnection ocured, we will write to socket all comands, right after reconnect
+	reconnectAtempts int              // current number of reconnect tryes
+	status           connectionStatus // the connection status: true = connected
 
 	URL                    string        // the URL to dial
 	KeepAliveTimeout       time.Duration // the inerval for sending pings
@@ -131,16 +130,6 @@ func (wsc *WsConn) WriteMessage(messageType int, data []byte) error {
 		return response
 	}
 	return ErrNotConnected
-}
-
-// SendingFatalErrors we can set to send fatal errors through a channel
-func (wsc *WsConn) SendingFatalErrors() bool {
-	return wsc.isSendingFatalError
-}
-
-// SetSendingFatalErrors if set true, will send a signal through FatalErrorChan
-func (wsc *WsConn) SetSendingFatalErrors(option bool) {
-	wsc.isSendingFatalError = option
 }
 
 // listenForWrite will listen for any message and write it to the ws connection
@@ -220,11 +209,8 @@ func (wsc *WsConn) reconnect() {
 			// we finish reconnection atempts
 			// we must kill the process
 			fatalError := errors.New("We could't reconnect to the web socket")
-			if wsc.isSendingFatalError {
-				wsc.FatalErrorChan <- fatalError
-				return
-			}
-			log.Panic(fatalError)
+			wsc.FatalErrorChan <- fatalError
+			return
 		}
 
 		wsc.reconnectAtempts = 0
