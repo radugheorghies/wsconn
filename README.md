@@ -1,7 +1,7 @@
 # wsconn
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/radugheorghies/wsconn)](https://goreportcard.com/report/github.com/radugheorghies/wsconn)
-[![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/Naereen/StrapDown.js/blob/master/LICENSE)
+[![GitHub](https://img.shields.io/github/license/radugheorghies/wsconn.svg)](https://github.com/radugheorghies/wsconn/blob/master/LICENCE)
 
 wsconn is a websocket client based on [gorilla/websocket](https://github.com/gorilla/websocket) that automatically reconnects if the connection is dropped. It is thread safe, all write opperations are sent through a chanel, so you can have multiple goroutines that write to socket in the same time. If an error occured, you can wait until you receive a successful reconnect message (see the example)
 
@@ -77,4 +77,4 @@ Thank you all for sharing your code!
 
 ## Licence
 
-[![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/Naereen/StrapDown.js/blob/master/LICENSE)
+[![GitHub](https://img.shields.io/github/license/radugheorghies/wsconn.svg)](https://github.com/radugheorghies/wsconn/blob/master/LICENCE)
