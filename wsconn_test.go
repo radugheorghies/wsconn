@@ -1,4 +1,4 @@
-package wsconn_test
+package wsconn
 
 import (
 	"testing"
