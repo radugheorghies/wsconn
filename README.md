@@ -25,7 +25,7 @@ func main() {
 	wait := make(chan struct{})
 	ws := wsconn.New("wss://api.hitbtc.com/api/2/ws")
 	ws.SetSendingFatalErrors(true)
-	// use ws.SetHeaders if you to set the header
+	// use ws.SetHeaders if you need to set the headers
 
 	ws.Run()
 	defer ws.Close()
