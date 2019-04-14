@@ -33,6 +33,11 @@ type connectionStatus struct {
 	sync.Mutex
 }
 
+type recover struct {
+	commands []string
+	sync.Mutex
+}
+
 func (cs *connectionStatus) isConnected() bool {
 	cs.Lock()
 	defer cs.Unlock()
@@ -55,7 +60,7 @@ type WsConn struct {
 	reconnectChan    chan struct{}    // the chan where we send recconect signals
 	reqHeader        http.Header      // request header
 	httpResp         *http.Response   // httpResponse used only for debuging
-	recoverCommands  []string         // if a reconnection ocured, we will write to socket all comands, right after reconnect
+	recoverCommands  recover          // if a reconnection ocured, we will write to socket all comands, right after reconnect
 	reconnectAtempts int              // current number of reconnect tryes
 	status           connectionStatus // the connection status: true = connected
 
@@ -65,9 +70,8 @@ type WsConn struct {
 	TimeBetweenReconnects  time.Duration // how many seconds we wait between reonnect atempts
 	ReadBufferSize         int           // read buffer size
 	WriteBufferSize        int           // write buffer size
-
-	SuccessfulReconnect chan struct{} // this chanel send a signal when a reconnetion is succesfull
-	FatalErrorChan      chan error    // this is a channel were we trow all fatal errors
+	SuccessfulReconnect    chan struct{} // this chanel send a signal when a reconnetion is succesfull
+	FatalErrorChan         chan error    // this is a channel were we trow all fatal errors
 }
 
 // for gorilla wesockets, we must specify
@@ -135,18 +139,11 @@ func (wsc *WsConn) WriteMessage(messageType int, data []byte) error {
 // listenForWrite will listen for any message and write it to the ws connection
 func (wsc *WsConn) listenForWrite() {
 	for msg := range wsc.writeChan {
-		select {
-		case <-wsc.reconnectChan:
-			msg.responseChan <- ErrNotConnected
+		err := wsc.ws.WriteMessage(msg.messageType, msg.data)
+		if err != nil {
 			wsc.dropConnection()
-			return
-		default:
-			err := wsc.ws.WriteMessage(msg.messageType, msg.data)
-			if err != nil {
-				wsc.dropConnection()
-			}
-			msg.responseChan <- err
 		}
+		msg.responseChan <- err
 	}
 }
 
@@ -156,16 +153,12 @@ func (wsc *WsConn) ReadMessage() (messageType int, message []byte, err error) {
 	err = ErrNotConnected
 
 	if wsc.status.isConnected() {
-		select {
-		case <-wsc.reconnectChan:
+
+		messageType, message, err = wsc.ws.ReadMessage()
+		if err != nil {
 			wsc.dropConnection()
-			return
-		default:
-			messageType, message, err = wsc.ws.ReadMessage()
-			if err != nil {
-				wsc.dropConnection()
-			}
 		}
+
 	}
 	return
 }
@@ -186,7 +179,6 @@ func (wsc *WsConn) reconnect() {
 			for {
 				select {
 				case <-wsc.reconnectChan:
-					log.Println("Consuming useless reconnect messages")
 					// do nothing
 				case <-finishReconnect:
 					return
@@ -200,7 +192,7 @@ func (wsc *WsConn) reconnect() {
 		wsc.ws = nil
 
 		for err := wsc.connect(); err != nil && wsc.reconnectAtempts < wsc.MaxReconnectionAtempts; wsc.reconnectAtempts++ {
-			log.Println("Error reconnecting to socket, we try again: ", err)
+			log.Println("Error reconnecting to socket: ", err)
 			time.Sleep(wsc.TimeBetweenReconnects)
 			err = wsc.connect()
 		}
@@ -208,25 +200,23 @@ func (wsc *WsConn) reconnect() {
 		if wsc.reconnectAtempts == wsc.MaxReconnectionAtempts {
 			// we finish reconnection atempts
 			// we must kill the process
-			fatalError := errors.New("We could't reconnect to the web socket")
+			fatalError := errors.New("We could't reconnect to the web socket. We tryed too many times")
 			wsc.FatalErrorChan <- fatalError
 			return
 		}
 
-		wsc.reconnectAtempts = 0
-		wsc.SuccessfulReconnect <- struct{}{}
-
-		// finishReconnect <- struct{}{}
+		finishReconnect <- struct{}{}
 		close(finishReconnect)
 
-		wsc.keepAlive()
-
 		// running recover comands
-		for _, v := range wsc.recoverCommands {
+		wsc.recoverCommands.Lock()
+		for _, v := range wsc.recoverCommands.commands {
 			if err := wsc.WriteMessage(1, []byte(v)); err != nil {
 				wsc.dropConnection()
 			}
 		}
+		wsc.recoverCommands.Unlock()
+
 	}
 }
 
@@ -247,6 +237,9 @@ func (wsc *WsConn) connect() error {
 
 	wsc.ws = wsConn
 	wsc.status.setStatus(true)
+	wsc.SuccessfulReconnect <- struct{}{}
+	wsc.reconnectAtempts = 0
+	wsc.keepAlive()
 
 	return nil
 }
@@ -263,5 +256,7 @@ func (wsc *WsConn) Close() {
 
 // AddToRecoverCommands generate a list of commands to be executed right after reconnect
 func (wsc *WsConn) AddToRecoverCommands(command string) {
-	wsc.recoverCommands = append(wsc.recoverCommands, command)
+	wsc.recoverCommands.Lock()
+	wsc.recoverCommands.commands = append(wsc.recoverCommands.commands, command)
+	wsc.recoverCommands.Unlock()
 }

@@ -46,21 +46,18 @@ func (wsc *WsConn) keepAlive() {
 					wsc.dropConnection()
 					return
 				}
-			} else {
-				log.Println("Socket is no longer connected, we didn't send ping msg")
-				return
-			}
-			// now we wait for the timeout moment
-			<-ticker.C
-			// test timeout condition
-			if wsc.status.isConnected() {
+				// now we wait for the timeout moment
+				<-ticker.C
+				// test timeout condition
 				if time.Now().Sub(keepAliveR.getLastResponse()) > wsc.KeepAliveTimeout {
-					log.Println("Timeout on ping!!!")
-					wsc.dropConnection()
+					log.Println("Ping timeout! Reconnecting.")
+					if wsc.status.isConnected() {
+						wsc.dropConnection()
+					}
 					return
 				}
 			} else {
-				log.Println("Socket is no longer connected, we didn't test the ping response")
+				log.Println("Socket is no longer connected, we didn't send ping msg")
 				return
 			}
 		}
