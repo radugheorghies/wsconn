@@ -37,11 +37,6 @@ func (wsc *WsConn) keepAlive() {
 		time.Sleep(500 * time.Microsecond)
 	}
 
-	wsc.ws.SetPongHandler(func(msg string) error {
-		keepAliveR.setLastResponse()
-		return nil
-	})
-
 	go func() {
 		defer ticker.Stop()
 
