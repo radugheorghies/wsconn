@@ -30,7 +30,6 @@ func (k *keepAliveResponse) getLastResponse() time.Time {
 func (wsc *WsConn) keepAlive() {
 	ticker := time.NewTicker(wsc.KeepAliveTimeout)
 	keepAliveR := &keepAliveResponse{}
-	keepAliveR.setLastResponse() // initiate keepalive with the current timestamp
 
 	wsc.ws.SetPongHandler(func(msg string) error {
 		keepAliveR.setLastResponse()
