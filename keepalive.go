@@ -32,6 +32,10 @@ func (wsc *WsConn) keepAlive() {
 	keepAliveR := &keepAliveResponse{}
 	keepAliveR.setLastResponse() // initiate keepalive with the current timestamp
 
+	for wsc.ws == nil {
+		time.Sleep(200 * time.Millisecond)
+	}
+
 	wsc.ws.SetPongHandler(func(msg string) error {
 		keepAliveR.setLastResponse()
 		return nil

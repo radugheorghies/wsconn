@@ -103,10 +103,10 @@ func New(url string) *WsConn {
 	return &wsc
 }
 
-// // SetReqHeader set the reques header
-// func (wsc *WsConn) SetReqHeader(reqHeader http.Header) {
-// 	wsc.reqHeader = reqHeader
-// }
+// SetReqHeader set the reques header
+func (wsc *WsConn) SetReqHeader(reqHeader http.Header) {
+	wsc.reqHeader = reqHeader
+}
 
 // Run is starting the magic :)
 func (wsc *WsConn) Run() {
