@@ -58,7 +58,9 @@ func (wsc *WsConn) keepAlive() {
 				if time.Now().Sub(keepAliveR.getLastResponse()) > wsc.KeepAliveTimeout {
 					log.Println("Ping timeout! Reconnecting.")
 					log.Println("Diference in time:", time.Now().Sub(keepAliveR.getLastResponse()))
-					wsc.dropConnChan <- struct{}{}
+					if wsc.status.isConnected() {
+						wsc.dropConnChan <- struct{}{}
+					}
 				}
 
 			} else {
