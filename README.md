@@ -40,7 +40,7 @@ func main() {
 	ws.WriteMessage(1, []byte(msg))
 	ws.AddToRecoverCommands(msg)
 
-	// only to test the recoonection
+	// only to test the reconnection
 	{
 		// here we are using the function CloseForTests but in production,
 		// if you want to close the connection use Close() function
