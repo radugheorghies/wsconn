@@ -46,14 +46,15 @@ func (wsc *WsConn) keepAlive() {
 					log.Println(err)
 					wsc.dropConnChan <- struct{}{}
 				}
-				// now we wait for the timeout moment
-				<-ticker.C
 				// test timeout condition
 				if time.Now().Sub(keepAliveR.getLastResponse()) > wsc.KeepAliveTimeout {
 					log.Println("Ping timeout! Reconnecting.")
 					log.Println("Diference in time:", time.Now().Sub(keepAliveR.getLastResponse()))
 					wsc.dropConnChan <- struct{}{}
 				}
+
+				// now we wait for the timeout moment
+				<-ticker.C
 			} else {
 				log.Println("Socket is no longer connected, we didn't send ping msg")
 			}
