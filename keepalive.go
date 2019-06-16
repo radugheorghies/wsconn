@@ -32,11 +32,6 @@ var keepAliveR = &keepAliveResponse{}
 func (wsc *WsConn) keepAlive() {
 	ticker := time.NewTicker(wsc.KeepAliveTimeout)
 
-	// wait until we have a valid connection
-	for !wsc.status.isConnected() {
-		time.Sleep(500 * time.Microsecond)
-	}
-
 	go func() {
 		defer ticker.Stop()
 
