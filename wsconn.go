@@ -115,6 +115,13 @@ func (wsc *WsConn) Run() {
 	go wsc.reconnect()
 	go wsc.listenForWrite()
 	wsc.Connect()
+
+	for !wsc.status.isConnected() {
+		time.Sleep(500 * time.Microsecond)
+	}
+
+	wsc.keepAlive()
+
 }
 
 func (wsc *WsConn) setDialer() {
