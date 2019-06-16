@@ -115,7 +115,6 @@ func (wsc *WsConn) Run() {
 	go wsc.reconnect()
 	go wsc.listenForWrite()
 	wsc.Connect()
-	wsc.keepAlive()
 }
 
 func (wsc *WsConn) setDialer() {

@@ -94,5 +94,7 @@ func (wsc *WsConn) connect() error {
 
 	log.Println("Connected.")
 
+	wsc.keepAlive()
+
 	return nil
 }

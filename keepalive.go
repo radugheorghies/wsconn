@@ -32,10 +32,6 @@ func (wsc *WsConn) keepAlive() {
 	keepAliveR := &keepAliveResponse{}
 	keepAliveR.setLastResponse() // initiate keepalive with the current timestamp
 
-	for wsc.ws == nil {
-		time.Sleep(200 * time.Millisecond)
-	}
-
 	wsc.ws.SetPongHandler(func(msg string) error {
 		keepAliveR.setLastResponse()
 		return nil
@@ -49,6 +45,7 @@ func (wsc *WsConn) keepAlive() {
 				if err := wsc.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
 					log.Println(err)
 					wsc.dropConnChan <- struct{}{}
+					return
 				}
 
 				// now we wait for the timeout moment
@@ -59,11 +56,12 @@ func (wsc *WsConn) keepAlive() {
 					log.Println("Ping timeout! Reconnecting.")
 					log.Println("Diference in time:", time.Now().Sub(keepAliveR.getLastResponse()))
 					wsc.dropConnChan <- struct{}{}
+					return
 				}
 
 			} else {
 				log.Println("Socket is no longer connected, we didn't send ping msg")
-				time.Sleep(time.Second)
+				return
 			}
 		}
 	}()
