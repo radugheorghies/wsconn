@@ -69,7 +69,8 @@ func (wsc *WsConn) reconnect() {
 		wsc.recoverCommands.Lock()
 		for _, v := range wsc.recoverCommands.commands {
 			if err := wsc.WriteMessage(1, []byte(v)); err != nil {
-				wsc.dropConnection()
+				wsc.dropConnChan <- struct{}{}
+				break
 			}
 		}
 		wsc.recoverCommands.Unlock()
