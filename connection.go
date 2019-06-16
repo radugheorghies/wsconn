@@ -58,7 +58,7 @@ func (wsc *WsConn) reconnect() {
 		}
 
 		if wsc.reconnectAtempts == wsc.MaxReconnectionAtempts {
-			// we achive max reconnection atempts
+			// we achieve max reconnection atempts
 			// we must kill the process
 			fatalError := errors.New("We could't reconnect to the web socket. We tryed too many times")
 			wsc.FatalErrorChan <- fatalError
