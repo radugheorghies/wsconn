@@ -27,9 +27,10 @@ func (k *keepAliveResponse) getLastResponse() time.Time {
 	return k.lastResponse
 }
 
+var keepAliveR = &keepAliveResponse{}
+
 func (wsc *WsConn) keepAlive() {
 	ticker := time.NewTicker(wsc.KeepAliveTimeout)
-	keepAliveR := &keepAliveResponse{}
 
 	// wait until we have a valid connection
 	for !wsc.status.isConnected() {

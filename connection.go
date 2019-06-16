@@ -93,6 +93,13 @@ func (wsc *WsConn) connect() error {
 	wsc.SuccessfulReconnect <- struct{}{}
 	wsc.reconnectAtempts = 0
 
+	// setting up the pong handler here
+	// because we regenerate the connection
+	wsc.ws.SetPongHandler(func(msg string) error {
+		keepAliveR.setLastResponse()
+		return nil
+	})
+
 	log.Println("Connected.")
 
 	return nil
