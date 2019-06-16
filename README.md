@@ -5,7 +5,7 @@
 
 wsconn is a websocket client based on [gorilla/websocket](https://github.com/gorilla/websocket) that automatically reconnects if the connection is dropped. It is thread safe, all write opperations are sent through a chanel, so you can have multiple goroutines that write to socket in the same time. If an error occured, you can wait until you receive a successful reconnect message (see the example)
 
-If you have a list of messages that need to be written right after a reconnect event, you can store them with AddToRecoverCommands method. 
+If you have a list of messages that need to be written right after a reconnect event, you can store them with AddToRecoverCommands method. After a disconnect event, those messages are written automatically thru the new connection.
 
 ## Installation
 
@@ -18,9 +18,9 @@ package main
 
 import (
 	"log"
+	"time"
 
-	"github.com/gorilla/websocket"
-	"github.com/radugheorghies/wsconn"
+	wsconn "github.com/radugheorghies/wsconn"
 )
 
 func main() {
@@ -35,10 +35,24 @@ func main() {
 	go listenForFatalErrors(ws)
 
 	// subscribing to trades
-	msg := "{\"method\": \"subscribeOrderbook\", \"params\": {\"symbol\": \"ETHBTC\"},\"id\": 123}"
+	msg := "{\"method\": \"subscribeOrderbook\", \"params\": {\"symbol\": \"LTCETH\"},\"id\": 123}"
 
-	ws.WriteMessage(websocket.TextMessage, []byte(msg))
+	ws.WriteMessage(1, []byte(msg))
 	ws.AddToRecoverCommands(msg)
+
+	// only to test the recoonection
+	{
+		// here we are using the function CloseForTests but in production,
+		// if you want to close the connection use Close() function
+		time.Sleep(time.Second*7)
+		ws.CloseForTests()
+
+		time.Sleep(time.Second*15)
+		ws.CloseForTests()
+
+		time.Sleep(time.Second*9)
+		ws.CloseForTests()
+	} // reconnection test done
 
 	<-wait
 
