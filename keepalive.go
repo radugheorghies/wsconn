@@ -61,6 +61,7 @@ func (wsc *WsConn) keepAlive() {
 				<-ticker.C
 			} else {
 				log.Println("Socket is no longer connected, we didn't send ping msg")
+				time.Sleep(time.Second)
 			}
 		}
 	}()
