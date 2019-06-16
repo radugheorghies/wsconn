@@ -10,6 +10,8 @@ import (
 )
 
 const (
+	// TextMessage is text message type
+	TextMessage = websocket.TextMessage
 	// defaultMaxReconnectionAtempts how many times we will try the reconnect
 	defaultMaxReconnectionAtempts = 10
 	// defaultTimeBetweenReconnects how many seconds we wait until will try the reconnect
