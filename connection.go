@@ -20,6 +20,14 @@ func (wsc *WsConn) Close() {
 	}
 }
 
+// CloseForTests closes the underlying network connection without
+// sending or waiting for a close frame, used only for test scenario.
+func (wsc *WsConn) CloseForTests() {
+	if wsc.ws != nil {
+		wsc.ws.Close()
+	}
+}
+
 func (wsc *WsConn) dropConnection() {
 	wsc.status.setStatus(false)
 	wsc.reconnectChan <- struct{}{}
@@ -27,6 +35,7 @@ func (wsc *WsConn) dropConnection() {
 
 func (wsc *WsConn) listenForDropConnMsg() {
 	for range wsc.dropConnChan {
+		log.Println("Drop connection chan signal received.")
 		if wsc.status.isConnected() {
 			wsc.dropConnection()
 		}
