@@ -2,7 +2,6 @@ package wsconn
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -58,6 +57,7 @@ type WsConn struct {
 
 	writeChan        chan message     // the chan for writing to socket
 	reconnectChan    chan struct{}    // the chan where we send recconect signals
+	dropConnChan     chan struct{}    // we use a channel to grab all dorp connections request
 	reqHeader        http.Header      // request header
 	httpResp         *http.Response   // httpResponse used only for debuging
 	recoverCommands  recover          // if a reconnection ocured, we will write to socket all comands, right after reconnect
@@ -86,6 +86,7 @@ func New(url string) *WsConn {
 	wsc := WsConn{
 		writeChan:           make(chan message, 1),
 		reconnectChan:       make(chan struct{}),
+		dropConnChan:        make(chan struct{}),
 		SuccessfulReconnect: make(chan struct{}, 1),
 		FatalErrorChan:      make(chan error, 1),
 	}
@@ -105,153 +106,21 @@ func New(url string) *WsConn {
 // 	wsc.reqHeader = reqHeader
 // }
 
+// Run is starting the magic :)
+func (wsc *WsConn) Run() {
+	wsc.setDialer()
+	go wsc.listenForDropConnMsg()
+	go wsc.reconnect()
+	go wsc.listenForWrite()
+	wsc.Connect()
+	wsc.keepAlive()
+}
+
 func (wsc *WsConn) setDialer() {
 	wsc.dialer = &websocket.Dialer{
 		ReadBufferSize:  wsc.ReadBufferSize,
 		WriteBufferSize: wsc.WriteBufferSize,
 	}
-}
-
-// Run is starting the magic :)
-func (wsc *WsConn) Run() {
-	wsc.setDialer()
-	go wsc.reconnect()
-	go wsc.listenForWrite()
-	wsc.Connect()
-}
-
-// WriteMessage will write message in channel in order to be written on socket
-func (wsc *WsConn) WriteMessage(messageType int, data []byte) error {
-	if wsc.status.isConnected() {
-		responseChan := make(chan error)
-		wsc.writeChan <- message{
-			data:         data,
-			messageType:  messageType,
-			responseChan: responseChan,
-		}
-		response := <-responseChan
-		close(responseChan)
-		return response
-	}
-	return ErrNotConnected
-}
-
-// listenForWrite will listen for any message and write it to the ws connection
-func (wsc *WsConn) listenForWrite() {
-	for msg := range wsc.writeChan {
-		err := wsc.ws.WriteMessage(msg.messageType, msg.data)
-		if err != nil {
-			wsc.dropConnection()
-		}
-		msg.responseChan <- err
-	}
-}
-
-// ReadMessage will read message from the ws
-// If the connection is closed ErrNotConnected is returned
-func (wsc *WsConn) ReadMessage() (messageType int, message []byte, err error) {
-	err = ErrNotConnected
-
-	if wsc.status.isConnected() {
-
-		messageType, message, err = wsc.ws.ReadMessage()
-		if err != nil {
-			wsc.dropConnection()
-		}
-
-	}
-	return
-}
-
-func (wsc *WsConn) dropConnection() {
-	wsc.status.setStatus(false)
-	wsc.reconnectChan <- struct{}{}
-}
-
-func (wsc *WsConn) reconnect() {
-	// listen for reconect message
-	// if other reconnect message is coming and the
-	// reconnect faze is not finished, we will apply the drop pattern
-	for range wsc.reconnectChan {
-		finishReconnect := make(chan struct{})
-
-		go func() {
-			for {
-				select {
-				case <-wsc.reconnectChan:
-					// do nothing
-				case <-finishReconnect:
-					return
-				default:
-					//do nothing
-				}
-			}
-		}()
-
-		// reconnect code
-		wsc.ws = nil
-
-		for err := wsc.connect(); err != nil && wsc.reconnectAtempts < wsc.MaxReconnectionAtempts; wsc.reconnectAtempts++ {
-			log.Println("Error reconnecting to socket: ", err)
-			time.Sleep(wsc.TimeBetweenReconnects)
-			err = wsc.connect()
-		}
-
-		if wsc.reconnectAtempts == wsc.MaxReconnectionAtempts {
-			// we finish reconnection atempts
-			// we must kill the process
-			fatalError := errors.New("We could't reconnect to the web socket. We tryed too many times")
-			wsc.FatalErrorChan <- fatalError
-			return
-		}
-
-		finishReconnect <- struct{}{}
-		close(finishReconnect)
-
-		// running recover comands
-		wsc.recoverCommands.Lock()
-		for _, v := range wsc.recoverCommands.commands {
-			if err := wsc.WriteMessage(1, []byte(v)); err != nil {
-				wsc.dropConnection()
-			}
-		}
-		wsc.recoverCommands.Unlock()
-
-	}
-}
-
-// Connect to ws
-func (wsc *WsConn) Connect() {
-	wsc.dropConnection()
-}
-
-func (wsc *WsConn) connect() error {
-	log.Println("Connecting")
-
-	wsConn, httpResp, err := wsc.dialer.Dial(wsc.URL, wsc.reqHeader)
-
-	if err != nil {
-		wsc.httpResp = httpResp
-		return err
-	}
-
-	wsc.ws = wsConn
-	wsc.status.setStatus(true)
-	wsc.SuccessfulReconnect <- struct{}{}
-	wsc.reconnectAtempts = 0
-	wsc.keepAlive()
-
-	return nil
-}
-
-// Close closes the underlying network connection without
-// sending or waiting for a close frame.
-func (wsc *WsConn) Close() {
-	if wsc.ws != nil {
-		wsc.ws.Close()
-	}
-
-	wsc.status.setStatus(false)
 }
 
 // AddToRecoverCommands generate a list of commands to be executed right after reconnect

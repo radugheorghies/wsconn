@@ -30,6 +30,7 @@ func (k *keepAliveResponse) getLastResponse() time.Time {
 func (wsc *WsConn) keepAlive() {
 	ticker := time.NewTicker(wsc.KeepAliveTimeout)
 	keepAliveR := &keepAliveResponse{}
+	keepAliveR.setLastResponse() // initiate keepalive with the current timestamp
 
 	wsc.ws.SetPongHandler(func(msg string) error {
 		keepAliveR.setLastResponse()
@@ -43,22 +44,18 @@ func (wsc *WsConn) keepAlive() {
 			if wsc.status.isConnected() {
 				if err := wsc.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
 					log.Println(err)
-					wsc.dropConnection()
-					return
+					wsc.dropConnChan <- struct{}{}
 				}
 				// now we wait for the timeout moment
 				<-ticker.C
 				// test timeout condition
 				if time.Now().Sub(keepAliveR.getLastResponse()) > wsc.KeepAliveTimeout {
 					log.Println("Ping timeout! Reconnecting.")
-					if wsc.status.isConnected() {
-						wsc.dropConnection()
-					}
-					return
+					log.Println("Diference in time:", time.Now().Sub(keepAliveR.getLastResponse()))
+					wsc.dropConnChan <- struct{}{}
 				}
 			} else {
 				log.Println("Socket is no longer connected, we didn't send ping msg")
-				return
 			}
 		}
 	}()
