@@ -37,7 +37,7 @@ func main() {
 	// subscribing to trades
 	msg := "{\"method\": \"subscribeOrderbook\", \"params\": {\"symbol\": \"LTCETH\"},\"id\": 123}"
 
-	ws.WriteMessage(ws.TextMessage, []byte(msg))
+	ws.WriteMessage(wsconn.TextMessage, []byte(msg))
 	ws.AddToRecoverCommands(msg)
 
 	// only to test the reconnection
